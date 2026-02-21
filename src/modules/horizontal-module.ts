@@ -582,19 +582,15 @@ export class UltraHorizontalModule extends BaseUltraModule {
       moduleHandler.metadata?.tags?.includes('premium') ||
       false;
 
-    // Check for Pro access using the same logic as ultra-card.ts
-    let hasProAccess = false;
     const integrationUser = ucCloudAuthService.checkIntegrationAuth(hass);
-    if (
-      integrationUser?.subscription?.tier === 'pro' &&
-      integrationUser?.subscription?.status === 'active'
-    ) {
-      hasProAccess = true;
-    } else if (ucCloudAuthService.isAuthenticated()) {
+    let hasProAccess =
+      integrationUser?.source === 'local' ||
+      (integrationUser?.subscription?.tier === 'pro' &&
+        integrationUser?.subscription?.status === 'active');
+    if (!hasProAccess && ucCloudAuthService.isAuthenticated()) {
       const cloudUser = ucCloudAuthService.getCurrentUser();
-      if (cloudUser?.subscription?.tier === 'pro' && cloudUser?.subscription?.status === 'active') {
-        hasProAccess = true;
-      }
+      hasProAccess =
+        !!(cloudUser?.subscription?.tier === 'pro' && cloudUser?.subscription?.status === 'active');
     }
 
     const shouldShowProOverlay = isProModule && !hasProAccess;

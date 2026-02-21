@@ -74,13 +74,13 @@ export class UltraDynamicWeatherModule extends BaseUltraModule {
     const weatherModule = module as DynamicWeatherModule;
     const lang = hass?.locale?.language || 'en';
 
-    // Check Pro authentication
+    // Pro: local build always unlocked; otherwise integration Pro
     const integrationUser = ucCloudAuthService.checkIntegrationAuth(hass);
     const isPro =
-      integrationUser?.subscription?.tier === 'pro' &&
-      integrationUser?.subscription?.status === 'active';
+      integrationUser?.source === 'local' ||
+      (integrationUser?.subscription?.tier === 'pro' &&
+        integrationUser?.subscription?.status === 'active');
 
-    // If not Pro, show lock UI
     if (!isPro) {
       return this.renderProLockUI(lang);
     }

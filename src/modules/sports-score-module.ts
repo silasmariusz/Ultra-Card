@@ -242,13 +242,12 @@ export class UltraSportsScoreModule extends BaseUltraModule {
     const sportsModule = module as SportsScoreModule;
     const lang = hass?.locale?.language || 'en';
 
-    // Check Pro authentication
     const integrationUser = ucCloudAuthService.checkIntegrationAuth(hass);
     const isPro =
-      integrationUser?.subscription?.tier === 'pro' &&
-      integrationUser?.subscription?.status === 'active';
+      integrationUser?.source === 'local' ||
+      (integrationUser?.subscription?.tier === 'pro' &&
+        integrationUser?.subscription?.status === 'active');
 
-    // If not Pro, show lock UI
     if (!isPro) {
       return this.renderProLockUI(lang);
     }
@@ -1167,11 +1166,11 @@ export class UltraSportsScoreModule extends BaseUltraModule {
     const moduleWithDesign = sportsModule as any;
     const designFromDesignObject = (sportsModule as any).design || {};
 
-    // Check Pro access for preview
     const integrationUser = ucCloudAuthService.checkIntegrationAuth(hass);
     const isPro =
-      integrationUser?.subscription?.tier === 'pro' &&
-      integrationUser?.subscription?.status === 'active';
+      integrationUser?.source === 'local' ||
+      (integrationUser?.subscription?.tier === 'pro' &&
+        integrationUser?.subscription?.status === 'active');
 
     if (!isPro) {
       return this.renderLockedPreview();

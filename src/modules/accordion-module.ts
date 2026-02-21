@@ -1529,14 +1529,11 @@ export class UltraAccordionModule extends BaseUltraModule {
                   childModuleHandler.metadata?.tags?.includes('premium') ||
                   false;
 
-                let hasProAccess = false;
                 const integrationUser = ucCloudAuthService.checkIntegrationAuth(hass);
-                if (
-                  integrationUser?.subscription?.tier === 'pro' &&
-                  integrationUser?.subscription?.status === 'active'
-                ) {
-                  hasProAccess = true;
-                }
+                const hasProAccess =
+                  integrationUser?.source === 'local' ||
+                  (integrationUser?.subscription?.tier === 'pro' &&
+                    integrationUser?.subscription?.status === 'active');
 
                 if (isProModule && !hasProAccess) {
                   return html`
