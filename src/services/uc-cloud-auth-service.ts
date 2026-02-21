@@ -115,10 +115,10 @@ class UcCloudAuthService {
    * Returns a local Pro user so that Pro modules and unlimited 3rd party cards work
    * without any external server or licensing. Cloud features (backup/restore/sync) are
    * disabled in this build; use source === 'integration' to gate cloud UI.
+   * Always returns Pro in this build (even when hass is not ready) so module selector never locks Pro modules.
    */
-  checkIntegrationAuth(hass: any): CloudUser | null {
+  checkIntegrationAuth(_hass?: any): CloudUser | null {
     try {
-      if (!hass?.states) return null;
       return { ...UcCloudAuthService.LOCAL_PRO_USER };
     } catch {
       return null;
