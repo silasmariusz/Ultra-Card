@@ -118,11 +118,12 @@ export declare class UltraCardEditor extends LitElement {
      */
     private _cleanupCloudSyncListeners;
     /**
-     * Render PRO TAB (New dedicated tab for all Pro features)
+     * Render PRO TAB. Cloud features (backup/restore/sync/billing) are hidden in this build.
+     * Only local Pro settings (e.g. skip default modules) and "all features unlocked" message are shown.
      */
     private _renderProTab;
     /**
-     * Render Ultra Card Pro section (DEPRECATED - kept for backward compatibility)
+     * Render Ultra Card Pro section. Cloud UI hidden when source === 'local'.
      */
     private _renderCloudSyncSection;
     /**

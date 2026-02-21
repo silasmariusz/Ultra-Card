@@ -311,9 +311,7 @@ export declare class LayoutTab extends LitElement {
      * Creates a native_card module (not external_card)
      */
     private _addNativeCard;
-    /**
-     * Open Ultra Card Pro purchase page
-     */
+    /** Cloud / Pro purchase page disabled in this build */
     private _openProPage;
     private _isRefreshingGlobalCount;
     private _duplicateModule;

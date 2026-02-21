@@ -3142,7 +3142,6 @@ export interface GridModule extends BaseModule {
     grid_style: GridStylePreset;
     grid_display_mode: GridDisplayMode;
     columns: number;
-    columns_mobile?: number;
     rows?: number;
     gap: number;
     sort_by: GridSortBy;
