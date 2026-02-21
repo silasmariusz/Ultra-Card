@@ -2846,16 +2846,19 @@ export class UltraCard extends LitElement {
   }
 
   /**
-   * Check if the current user has pro access
-   * ONLY checks integration auth (no card-based auth)
+   * Check if the current user has pro access.
+   * In this build Pro modules are always unlocked (no login/cloud required).
    */
   private _hasProAccess(): boolean {
-    // Check for integration auth only (cross-device, server-side)
     const integrationUser = ucCloudAuthService.checkIntegrationAuth(this.hass);
-    return (
+    if (integrationUser?.source === 'local') return true;
+    if (
       integrationUser?.subscription?.tier === 'pro' &&
       integrationUser?.subscription?.status === 'active'
-    );
+    )
+      return true;
+    // Local build fallback: no cloud user still means Pro unlocked (e.g. hass not ready yet)
+    return true;
   }
 
   /**
