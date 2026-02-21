@@ -18,6 +18,9 @@
       "title": "Behavior",
       "description": "Configure how your card responds to user interactions"
     },
+    "pro": {
+      "local_unlocked": "All Pro modules (Video Background, Animated Clock/Weather/Forecast) and unlimited 3rd party cards are unlocked locally. Cloud backup/sync and external licensing are disabled in this build."
+    },
     "pro_settings": {
       "title": "Pro Settings",
       "description": "Exclusive settings for Ultra Card Pro subscribers",

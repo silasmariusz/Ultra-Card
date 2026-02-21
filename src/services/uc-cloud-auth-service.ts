@@ -22,6 +22,9 @@ export interface UserSubscription {
   snapshot_limit: number;
 }
 
+/** 'integration' = from Ultra Card Pro Cloud integration (ultracard.io); 'local' = unlocked locally, no cloud */
+export type CloudUserSource = 'integration' | 'local';
+
 export interface CloudUser {
   id: number;
   username: string;
@@ -32,6 +35,8 @@ export interface CloudUser {
   refreshToken?: string;
   expiresAt: number;
   subscription?: UserSubscription;
+  /** When set to 'local', cloud features (backup/restore/sync/billing) are hidden; Pro modules still work */
+  source?: CloudUserSource;
 }
 
 export interface LoginCredentials {
@@ -83,71 +88,48 @@ class UcCloudAuthService {
     // this._retryCloudSessionCheck();
   }
 
+  /** Local Pro user: no external server, all Pro modules and unlimited 3rd party cards enabled */
+  private static readonly LOCAL_PRO_USER: CloudUser = {
+    id: 0,
+    username: 'local',
+    email: '',
+    displayName: 'Local (all features unlocked)',
+    token: '',
+    expiresAt: 0,
+    source: 'local',
+    subscription: {
+      tier: 'pro',
+      status: 'active',
+      features: {
+        auto_backups: false,
+        snapshots_enabled: false,
+        snapshot_limit: 0,
+        backup_retention_days: 0,
+      },
+      snapshot_count: 0,
+      snapshot_limit: 0,
+    },
+  };
+
   /**
-   * Check if Ultra Card Pro Cloud integration is installed and authenticated
-   * Returns integration auth data if available, null otherwise
-   *
-   * SECURITY: This reads from a protected sensor entity that users cannot manipulate.
-   * The sensor is created by the Ultra Card Pro Cloud integration after successful
-   * authentication with ultracard.io.
+   * Returns a local Pro user so that Pro modules and unlimited 3rd party cards work
+   * without any external server or licensing. Cloud features (backup/restore/sync) are
+   * disabled in this build; use source === 'integration' to gate cloud UI.
    */
   checkIntegrationAuth(hass: any): CloudUser | null {
     try {
-      // Check for the protected sensor entity
-      const sensorEntityId = 'sensor.ultra_card_pro_cloud_authentication_status';
-      const sensorState = hass?.states?.[sensorEntityId];
-
-      if (!sensorState) {
-        return null;
-      }
-
-      // Check if authenticated
-      if (sensorState.state !== 'connected' || !sensorState.attributes?.authenticated) {
-        return null;
-      }
-
-      const attrs = sensorState.attributes;
-
-      // Convert sensor data to CloudUser format
-      const user: CloudUser = {
-        id: attrs.user_id,
-        username: attrs.username || '',
-        email: attrs.email || '',
-        displayName: attrs.display_name || attrs.username || '',
-        token: attrs.token || '', // Use token from sensor attributes for API calls
-        expiresAt: 0, // Managed by integration server-side
-        subscription: {
-          tier: attrs.subscription_tier || 'free',
-          status: attrs.subscription_status || 'expired',
-          expires: attrs.subscription_expires,
-          features: attrs.features || {
-            auto_backups: attrs.subscription_tier === 'pro',
-            snapshots_enabled: attrs.subscription_tier === 'pro',
-            snapshot_limit: attrs.subscription_tier === 'pro' ? 10 : 0,
-            backup_retention_days: 90,
-          },
-          snapshot_count: 0,
-          snapshot_limit: attrs.subscription_tier === 'pro' ? 10 : 0,
-        },
-      };
-
-      return user;
-    } catch (error) {
-      console.debug('No Ultra Card Pro Cloud integration found:', error);
+      if (!hass?.states) return null;
+      return { ...UcCloudAuthService.LOCAL_PRO_USER };
+    } catch {
       return null;
     }
   }
 
   /**
-   * Check if integration is installed (whether authenticated or not)
+   * Cloud integration is disabled in this build; no external auth.
    */
-  isIntegrationInstalled(hass: any): boolean {
-    try {
-      const sensorEntityId = 'sensor.ultra_card_pro_cloud_authentication_status';
-      return !!hass?.states?.[sensorEntityId];
-    } catch (error) {
-      return false;
-    }
+  isIntegrationInstalled(_hass: any): boolean {
+    return false;
   }
 
   /**

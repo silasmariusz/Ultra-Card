@@ -9133,12 +9133,8 @@ export class LayoutTab extends LitElement {
     this._activeModuleTab = 'general';
   }
 
-  /**
-   * Open Ultra Card Pro purchase page
-   */
-  private _openProPage(): void {
-    window.open('https://ultracard.io/product/ultra-card-pro/', '_blank');
-  }
+  /** Cloud / Pro purchase page disabled in this build */
+  private _openProPage(): void {}
   private _isRefreshingGlobalCount = false;
 
   private _duplicateModule(rowIndex: number, columnIndex: number, moduleIndex: number): void {
@@ -28310,7 +28306,7 @@ export class LayoutTab extends LitElement {
                                   window.open(wpPreset.preset_url, '_blank');
                                 }
                               }}
-                              title="View full preset details on ultracard.io"
+                              title="View preset details"
                             >
                               <ha-icon icon="mdi:open-in-new"></ha-icon>
                               <span>Read More</span>
@@ -28346,15 +28342,7 @@ export class LayoutTab extends LitElement {
                           ${wpStatus.error.includes('CORS') ||
                           wpStatus.error.includes('Failed to fetch')
                             ? html`
-                                <strong>Connection Issue:</strong> Unable to load presets from
-                                ultracard.io.<br />
-                                This usually happens when accessing Home Assistant via IP address
-                                instead of homeassistant.local.<br /><br />
-                                <strong>Solutions:</strong><br />
-                                • Access HA via <code>http://homeassistant.local:8123</code> instead
-                                of IP address<br />
-                                • Or wait for the server CORS configuration to be updated<br />
-                                • Check your internet connection
+                                <strong>Presets:</strong> Cloud preset catalog is disabled in this build.
                               `
                             : html`Error: ${wpStatus.error}<br />Check your internet connection and
                                 try refreshing.`}

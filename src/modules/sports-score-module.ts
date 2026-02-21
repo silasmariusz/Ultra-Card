@@ -297,7 +297,7 @@ export class UltraSportsScoreModule extends BaseUltraModule {
           ${localize('editor.pro.sports_description', lang, 'Sports Score module requires an Ultra Card Pro subscription to display live sports scores and team information.')}
         </div>
         <a
-          href="https://ultracard.io/pro"
+          href="#"
           target="_blank"
           style="
             display: inline-flex;

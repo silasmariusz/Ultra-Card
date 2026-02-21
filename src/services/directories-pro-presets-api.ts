@@ -53,9 +53,21 @@ export class DirectoriesProPresetsAPI {
   ];
 
   /**
-   * Fetch all presets from Directories Pro
+   * Fetch all presets. In this build cloud preset catalog is disabled; returns empty.
    */
   async fetchPresets(
+    _params: {
+      page?: number;
+      per_page?: number;
+      category?: string;
+      search?: string;
+      sort?: 'newest' | 'popular' | 'rating' | 'trending';
+    } = {}
+  ): Promise<WordPressPresetsResponse> {
+    return { presets: [], total: 0, pages: 0, current_page: 1 };
+  }
+
+  private async _fetchPresetsImpl(
     params: {
       page?: number;
       per_page?: number;
@@ -66,13 +78,11 @@ export class DirectoriesProPresetsAPI {
   ): Promise<WordPressPresetsResponse> {
     const cacheKey = `presets_${JSON.stringify(params)}`;
 
-    // Check memory cache first
     const cached = this.cache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < DirectoriesProPresetsAPI.CACHE_DURATION) {
       return cached.data;
     }
 
-    // Check localStorage cache
     const localCached = this._getFromLocalStorage(cacheKey);
     if (localCached) {
       this.cache.set(cacheKey, localCached);

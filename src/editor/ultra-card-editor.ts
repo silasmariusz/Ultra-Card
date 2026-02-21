@@ -3762,28 +3762,30 @@ export class UltraCardEditor extends LitElement {
     }
     this._hasInitializedAuth = true;
 
-    // Priority 1: Check for integration auth (cross-device)
+    // Priority 1: Check for integration auth (cross-device) or local Pro user
     const integrationUser = ucCloudAuthService.checkIntegrationAuth(this.hass);
     if (integrationUser) {
       this._cloudUser = integrationUser;
     } else {
-      // Priority 2: Fall back to card-based auth (single device)
       this._cloudUser = ucCloudAuthService.getCurrentUser();
+    }
+
+    const isLocalPro = this._cloudUser?.source === 'local';
+    if (isLocalPro) {
+      // No cloud: skip Pro services init, sync/backup listeners, and backup check
+      return;
     }
 
     this._syncStatus = ucCloudSyncService.getSyncStatus();
     this._backupStatus = ucCloudBackupService.getStatus();
 
-    // If user exists in storage, attempt to restore session
     if (this._cloudUser && ucCloudAuthService.isAuthenticated()) {
-      // Token is valid, just restore services
       try {
         await this._initializeProServices(this._cloudUser);
       } catch (error) {
         console.error('❌ Failed to restore Pro session:', error);
       }
     } else if (this._cloudUser && this._cloudUser.refreshToken) {
-      // Token needs refresh - attempt it but don't logout on failure
       try {
         await ucCloudAuthService.refreshToken();
         this._cloudUser = ucCloudAuthService.getCurrentUser();
@@ -3791,35 +3793,26 @@ export class UltraCardEditor extends LitElement {
           await this._initializeProServices(this._cloudUser);
         }
       } catch (error) {
-        // Don't clear session on refresh failure - user might have network issues
-        // The auth service will handle logging them out if truly invalid
         console.warn('⚠️ Session restore failed, please check your connection');
       }
     }
 
-    // Setup auth listener
     this._authListener = (user: CloudUser | null) => {
       this._cloudUser = user;
       this._loginError = '';
       this.requestUpdate();
     };
     ucCloudAuthService.addListener(this._authListener);
-
-    // Setup sync listener
     this._syncListener = (status: SyncStatus) => {
       this._syncStatus = status;
       this.requestUpdate();
     };
     ucCloudSyncService.addListener(this._syncListener);
-
-    // Setup backup listener
     this._backupListener = (status: BackupStatus) => {
       this._backupStatus = status;
       this.requestUpdate();
     };
     ucCloudBackupService.addListener(this._backupListener);
-
-    // Check for newer backups (smart sync)
     if (this._cloudUser) {
       this._checkForNewerBackup();
     }
@@ -3859,58 +3852,58 @@ export class UltraCardEditor extends LitElement {
   }
 
   /**
-   * Render PRO TAB (New dedicated tab for all Pro features)
+   * Render PRO TAB. Cloud features (backup/restore/sync/billing) are hidden in this build.
+   * Only local Pro settings (e.g. skip default modules) and "all features unlocked" message are shown.
    */
   private _renderProTab(): TemplateResult {
     const lang = this.hass?.locale?.language || 'en';
-
-    // Check for Ultra Card Pro Cloud integration (only auth method)
     const integrationUser = ucCloudAuthService.checkIntegrationAuth(this.hass);
-    const isIntegrationInstalled = ucCloudAuthService.isIntegrationInstalled(this.hass);
-
-    // Pro access via integration only
+    const isCloudUser = integrationUser?.source === 'integration';
     const isPro = integrationUser?.subscription?.tier === 'pro';
-    const isLoggedIn = !!integrationUser;
 
     return html`
       <div class="pro-tab-content">
-        <!-- INTEGRATION STATUS (if installed) -->
-        ${this._renderIntegrationStatus(lang, integrationUser, isIntegrationInstalled)}
-
-        <!-- ULTRA CARD PRO BRANDED BANNER -->
-        ${this._renderProBanner(lang, isPro, isLoggedIn)}
-
-        <!-- AUTHENTICATION INFO (show if not authenticated via integration) -->
-        ${!integrationUser ? this._renderAuthInfo(isIntegrationInstalled) : ''}
-
-        <!-- PRO TOOLS SECTIONS (integration auth only) -->
-        ${isLoggedIn ? this._renderCardProTools(lang, isPro) : ''}
-        ${isLoggedIn && isPro ? this._renderDashboardProTools(lang) : ''}
-        ${isLoggedIn && isPro ? this._renderProSettings(lang) : ''}
-
-        <!-- MODALS -->
-        ${this._showBackupHistory && this._cloudUser
+        ${!isCloudUser
           ? html`
-              <uc-snapshot-history-modal
-                .open="${this._showBackupHistory}"
-                .hass="${this.hass}"
-                .subscription="${this._cloudUser.subscription!}"
-                @close-modal="${() => (this._showBackupHistory = false)}"
-                @snapshot-restored="${this._handleSnapshotRestored}"
-                @card-backup-restored="${this._handleCardBackupRestored}"
-              ></uc-snapshot-history-modal>
+              <div class="settings-section" style="margin-bottom: 16px;">
+                <p style="margin: 0; color: var(--secondary-text-color);">
+                  ${localize(
+                    'editor.pro.local_unlocked',
+                    lang,
+                    'All Pro modules (Video Background, Animated Clock/Weather/Forecast) and unlimited 3rd party cards are unlocked locally. Cloud backup/sync and external licensing are disabled in this build.'
+                  )}
+                </p>
+              </div>
             `
-          : ''}
-        ${this._showManualBackup && this._cloudUser
-          ? html`
-              <uc-manual-backup-dialog
-                .open="${this._showManualBackup}"
-                .config="${this.config}"
-                @dialog-closed="${() => (this._showManualBackup = false)}"
-                @backup-created="${this._handleManualBackupCreated}"
-              ></uc-manual-backup-dialog>
-            `
-          : ''}
+          : html`
+              ${this._renderIntegrationStatus(lang, integrationUser, true)}
+              ${this._renderProBanner(lang, isPro, true)}
+              ${this._renderCardProTools(lang, isPro)}
+              ${isPro ? this._renderDashboardProTools(lang) : ''}
+              ${this._showBackupHistory && this._cloudUser
+                ? html`
+                    <uc-snapshot-history-modal
+                      .open="${this._showBackupHistory}"
+                      .hass="${this.hass}"
+                      .subscription="${this._cloudUser.subscription!}"
+                      @close-modal="${() => (this._showBackupHistory = false)}"
+                      @snapshot-restored="${this._handleSnapshotRestored}"
+                      @card-backup-restored="${this._handleCardBackupRestored}"
+                    ></uc-snapshot-history-modal>
+                  `
+                : ''}
+              ${this._showManualBackup && this._cloudUser
+                ? html`
+                    <uc-manual-backup-dialog
+                      .open="${this._showManualBackup}"
+                      .config="${this.config}"
+                      @dialog-closed="${() => (this._showManualBackup = false)}"
+                      @backup-created="${this._handleManualBackupCreated}"
+                    ></uc-manual-backup-dialog>
+                  `
+                : ''}
+            `}
+        ${isPro ? this._renderProSettings(lang) : ''}
         ${this._showSnapshotSettings
           ? html`
               <uc-snapshot-settings-dialog
@@ -3925,33 +3918,26 @@ export class UltraCardEditor extends LitElement {
   }
 
   /**
-   * Render Ultra Card Pro section (DEPRECATED - kept for backward compatibility)
+   * Render Ultra Card Pro section. Cloud UI hidden when source === 'local'.
    */
   private _renderCloudSyncSection(lang: string): TemplateResult {
-    // Use integration auth only
     const integrationUser = ucCloudAuthService.checkIntegrationAuth(this.hass);
-    const isIntegrationInstalled = ucCloudAuthService.isIntegrationInstalled(this.hass);
+    const isCloudUser = integrationUser?.source === 'integration';
     const isPro =
       integrationUser?.subscription?.tier === 'pro' &&
       integrationUser?.subscription?.status === 'active';
-    const isLoggedIn = !!integrationUser;
+    const isLoggedIn = !!integrationUser && isCloudUser;
+
+    if (!isCloudUser) {
+      return html`<div class="settings-section ultra-card-pro-section"></div>`;
+    }
 
     return html`
       <div class="settings-section ultra-card-pro-section">
-        <!-- ULTRA CARD PRO BRANDED BANNER -->
         ${this._renderProBanner(lang, isPro, isLoggedIn)}
-
-        <!-- AUTHENTICATION INFO (integration only) -->
-        ${!integrationUser ? this._renderAuthInfo(isIntegrationInstalled) : ''}
-
-        <!-- CARD NAME SETTING (Always visible when logged in) -->
-        ${isLoggedIn ? this._renderCardNameSetting(lang) : ''}
-
-        <!-- PRO TOOLS SECTIONS (integration auth only) -->
-        ${isLoggedIn ? this._renderCardProTools(lang, isPro) : ''}
-        ${isLoggedIn && isPro ? this._renderDashboardProTools(lang) : ''}
-
-        <!-- MODALS (integration auth only) -->
+        ${this._renderCardNameSetting(lang)}
+        ${this._renderCardProTools(lang, isPro)}
+        ${isPro ? this._renderDashboardProTools(lang) : ''}
         ${this._showBackupHistory && integrationUser
           ? html`
               <uc-snapshot-history-modal
@@ -4105,7 +4091,7 @@ export class UltraCardEditor extends LitElement {
                 <ha-icon icon="mdi:cloud-download"></ha-icon>
                 Install via HACS
               </a>
-              <a href="https://ultracard.io" target="_blank" class="integration-button">
+              <a href="#" class="integration-button" @click="${(e: Event) => e.preventDefault()}">
                 <ha-icon icon="mdi:cart"></ha-icon>
                 Get PRO Subscription
               </a>
@@ -4321,7 +4307,7 @@ export class UltraCardEditor extends LitElement {
           </div>
           <button
             class="ultra-btn ultra-btn-upgrade"
-            @click="${() => window.open('https://ultracard.io/pro', '_blank')}"
+            @click="${() => { /* Cloud billing disabled in this build */ }}"
           >
             <ha-icon icon="mdi:star"></ha-icon>
             ${localize(
@@ -5783,9 +5769,7 @@ export class UltraCardEditor extends LitElement {
                   </button>
                   <p class="login-note">
                     Don't have an account?
-                    <a href="https://ultracard.io/register" target="_blank" rel="noopener">
-                      Create one free at ultracard.io
-                    </a>
+                    <span>Cloud sign-up disabled in this build.</span>
                   </p>
                 </div>
               </div>
@@ -5851,13 +5835,7 @@ export class UltraCardEditor extends LitElement {
         </form>
 
         <div class="login-links">
-          <a href="https://ultracard.io/forgot-password" target="_blank" rel="noopener">
-            Forgot Password?
-          </a>
-          <span>•</span>
-          <a href="https://ultracard.io/register" target="_blank" rel="noopener">
-            Create Account
-          </a>
+          <span>Cloud auth disabled in this build.</span>
         </div>
       </div>
     `;
@@ -6002,7 +5980,7 @@ export class UltraCardEditor extends LitElement {
    * Called both on fresh login and when restoring session from storage
    */
   private async _initializeProServices(user: CloudUser): Promise<void> {
-    const wordpressUrl = 'https://ultracard.io'; // TODO: Make this configurable
+    const wordpressUrl = ''; // Cloud disabled in this build
 
     // Initialize services
     if (this.hass) {

@@ -186,7 +186,7 @@ export class UltraBadgeOfHonorModule extends BaseUltraModule {
           )}
         </div>
         <a
-          href="https://ultracard.io/pro"
+          href="#"
           target="_blank"
           style="
             display: inline-flex;
